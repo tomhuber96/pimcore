@@ -716,7 +716,9 @@ class Document extends Element\AbstractElement
                     $site = Site::getCurrentSite();
                 }elseif (\Pimcore\Tool::isFrontendRequestByAdmin()){
                     $site = FrontendTool::getSiteForDocument($this);
-                    Site::setCurrentSite($site);
+                    if ($site) {
+                        Site::setCurrentSite($site);
+                    }
                 }
 
                 if ($site instanceof Site) {
