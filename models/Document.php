@@ -711,8 +711,14 @@ class Document extends Element\AbstractElement
 
         // check if this document is also the site root, if so return /
         try {
-            if (!$link && \Pimcore\Tool::isFrontend() && Site::isSiteRequest()) {
-                $site = Site::getCurrentSite();
+            if (!$link) {
+                if (\Pimcore\Tool::isFrontend() && Site::isSiteRequest()) {
+                    $site = Site::getCurrentSite();
+                }elseif (\Pimcore\Tool::isFrontendRequestByAdmin()){
+                    $site = FrontendTool::getSiteForDocument($this);
+                    Site::setCurrentSite($site);
+                }
+
                 if ($site instanceof Site) {
                     if ($site->getRootDocument()->getId() == $this->getId()) {
                         $link = '/';
@@ -764,7 +770,7 @@ class Document extends Element\AbstractElement
                 }
 
                 /** @var Site $site */
-                if ($site = FrontendTool::getSiteForDocument($this)) {
+                if ($site ?: FrontendTool::getSiteForDocument($this)) {
                     if ($site->getMainDomain()) {
                         // check if current document is the root of the different site, if so, preg_replace below doesn't work, so just return /
                         if ($site->getRootDocument()->getId() == $this->getId()) {
@@ -781,6 +787,28 @@ class Document extends Element\AbstractElement
                 }
             }
         }
+
+        if (isset($site)){
+            $request = $requestStack->getCurrentRequest();
+            $scheme = 'http://';
+            if ($request) {
+                $scheme = $request->getScheme() . '://';
+            }
+
+            if ($site->getMainDomain()) {
+                $host = $request->getHost();
+                $siteDomain =$site->getMainDomain();
+
+                // check if current document is the root of the different site, if so, preg_replace below doesn't work, so just return /
+                if ($site->getRootDocument()->getId() == $this->getId()) {
+                    $link = $scheme . $site->getMainDomain() . '/';
+                } else {
+                    $link = $scheme . $site->getMainDomain() .
+                        preg_replace('@^' . $site->getRootPath() . '/@', '/', $this->getRealFullPath());
+                }
+            }
+        }
+
 
         if (!$link) {
             $link = $this->getPath() . $this->getKey();
